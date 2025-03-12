@@ -1,4 +1,6 @@
 # Rede Neural (LSTM) - Amazon Stock
+## DELETAR
+Comando do docker: docker run -p 8000:8000 --rm -it -e DATABASE_URL=sqlite:///database.db -e ACCESS_TOKEN_EXPIRE_MINUTES=30 -e SECRET_KEY=b71dc0943459ff1e7e668af25342877d641a76967061ba620fc2da7104aa1b37 -e ALGORITHM=HS256 -e DOWNLOAD_PATH=/app -e NEW_NASDAQ_FILE=HistoricalData_1731547025648.csv neural_net_amzn-docker
 
 O projeto foi pensado para maximizar o ganho de uma ação em específico (No caso foi escolhida uma ação da Amazon) baseada em um modelo de rede neural preditivo do valor da ação em um período de 30 dias no futuro.
 

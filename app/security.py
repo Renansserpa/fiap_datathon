@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from zoneinfo import ZoneInfo
+import os
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -12,9 +13,13 @@ from sqlalchemy.orm import Session
 from database import get_session
 from models import User
 from schemas import TokenData
-from settings import Settings
+#from settings import Settings
 
-settings = Settings()
+#settings = Settings()
+ACCESS_TOKEN_EXPIRE_MINUTES = float(os.environ['ACCESS_TOKEN_EXPIRE_MINUTES'])
+ALGORITHM = os.environ['ALGORITHM']
+SECRET_KEY = os.environ['SECRET_KEY']
+
 pwd_context = PasswordHash.recommended()
 
 
@@ -27,11 +32,11 @@ def create_access_token(data: dict):
     #   data: É um parâmetro contendo informações desejadas para serem incluídas no JWT (no caso, o email do usuário)
     to_encode = data.copy()
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes= ACCESS_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({'exp': expire})
     encoded_jwt = encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+        to_encode, SECRET_KEY, algorithm= ALGORITHM
     )
     return encoded_jwt
 
@@ -74,7 +79,7 @@ def get_current_user(
 
     try:
         payload = decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token, SECRET_KEY, algorithms=[ALGORITHM]
         )
         username: str = payload.get('sub')
         if not username:

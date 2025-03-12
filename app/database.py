@@ -1,9 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+import os
 
-from settings import Settings
+#from settings import Settings
+DATABASE_URL = os.environ['DATABASE_URL']
 
-engine = create_engine(Settings().DATABASE_URL)
+engine = create_engine(DATABASE_URL)
 
 
 def get_session():
