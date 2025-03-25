@@ -10,6 +10,11 @@ class UserSchema(BaseModel):
     username: str
     email: EmailStr
     password: str
+    
+    
+class UpdateUserSchema(BaseModel):
+    username: str
+    password: str
 
 
 class UserPublic(BaseModel):
@@ -25,7 +30,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    user_email: str | None = None
 
 class NasdaqReportLine(BaseModel):
     date: date

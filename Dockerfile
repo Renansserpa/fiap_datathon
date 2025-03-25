@@ -17,8 +17,9 @@ COPY . .
 #RUN wget -q "https://storage.googleapis.com/chrome-for-testing-public/$(google-chrome --version | awk '{print $3}')/linux64/chromedriver-linux64.zip" && unzip chromedriver-linux64.zip -d /usr/local/bin/ && rm chromedriver-linux64.zip
 
 # Instalação do poetry
-RUN pip install poetry
-RUN poetry config virtualenvs.create false
+RUN pip install poetry \
+    && poetry config virtualenvs.create false \
+    && echo "$ENVIRONMENT"
 
 # Instalação das dependências do projeto via poetry
 RUN poetry install --no-root --no-interaction --no-ansi

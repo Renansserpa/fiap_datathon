@@ -14,6 +14,10 @@ from security import (
     verify_password,
 )
 
+from exceptions import (
+    UserNotFound
+)
+
 router = APIRouter(prefix='/auth', tags=['auth'])
 
 OAuth2Form = Annotated[OAuth2PasswordRequestForm, Depends()]
@@ -29,17 +33,8 @@ def login_for_access_token(form_data: OAuth2Form, session: Session):
     #   session: É apenas um parâmetro para que seja possível iniciar uma sessão com o banco de dados
     user = session.scalar(select(User).where(User.email == form_data.username))
 
-    if not user:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail='Incorrect email or password',
-        )
-
-    if not verify_password(form_data.password, user.password):
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail='Incorrect email or password',
-        )
+    if not user or not verify_password(form_data.password, user.password):
+        raise UserNotFound
 
     access_token = create_access_token(data={'sub': user.email})
 
