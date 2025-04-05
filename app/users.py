@@ -6,20 +6,20 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_session
-from models import User
-from schemas import (
+from .database import get_session
+from .models import User
+from .schemas import (
     Message,
     UserPublic,
     UserSchema,
     UpdateUserSchema
 )
 
-from exceptions import (
+from .exceptions import (
     UserAlreadyExists,
     PermissionDenied
 )
-from security import (
+from .security import (
     get_current_user,
     get_password_hash,
 )

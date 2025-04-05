@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-import auth, users, webscrapper
+from . import auth, users, webscrapper
 import os
 
 app = FastAPI()

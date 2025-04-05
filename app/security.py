@@ -10,10 +10,10 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from database import get_session
-from models import User
-from schemas import TokenData
-from exceptions import (
+from .database import get_session
+from .models import User
+from .schemas import TokenData
+from .exceptions import (
     NotAuthenticated,
     ExpiredToken
 )
