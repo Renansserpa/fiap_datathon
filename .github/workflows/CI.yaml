@@ -4,7 +4,7 @@ on:
   push:
     branches:
       # Regex que seleciona branches que sejam exatamente Renan, independente de maiúsculas ou minúsculas
-      - /(?i)^renan$/ 
+      - renan
 
 jobs:
   CI:
@@ -41,17 +41,3 @@ jobs:
           NEW_NASDAQ_FILE: ${{ secrets.NEW_NASDAQ_FILE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: poetry run pytest -s tests
-
-      #- name: Linter
-      #  run: ruff check
-
-      #- name: Aplicando pacote de segurança
-      #  run: bandit -c pyproject.toml -r .
-
-      #- name: create pull request
-      #  run: |
-      #    current_branch=$(git branch --show-current)
-      #    echo $current_branch
-      #    gh pr create -B main -H $current_branch --title 'Merging' --body 'Created by Github action'
-      #  env:
-      #      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
