@@ -29,8 +29,7 @@ jobs:
       - name: Instalando as dependências
         run: |
           pip install poetry
-          poetry config virtualenvs.create false
-          poetry install --all-extras --no-root
+          poetry install
 
       - name: Configurando PATH para Poetry
         run: echo "::add-path::$(poetry config virtualenvs.path)/bin"
