@@ -39,6 +39,7 @@ jobs:
           ALGORITHM: ${{ secrets.ALGORITHM }}
           DOWNLOAD_PATH: ${{ secrets.DOWNLOAD_PATH }}
           NEW_NASDAQ_FILE: ${{ secrets.NEW_NASDAQ_FILE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: poetry run pytest -s tests
 
       #- name: Linter
