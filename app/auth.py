@@ -1,21 +1,17 @@
-from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import get_session
+from .exceptions import UserNotFound
 from .models import User
 from .schemas import Token
 from .security import (
     create_access_token,
     verify_password,
-)
-
-from .exceptions import (
-    UserNotFound
 )
 
 router = APIRouter(prefix='/auth', tags=['auth'])

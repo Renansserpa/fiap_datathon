@@ -1,4 +1,4 @@
-#%%
+# %%
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -20,7 +20,7 @@ class PermissionDenied(DetailedHTTPException):
 class UserAlreadyExists(DetailedHTTPException):
     STATUS_CODE = status.HTTP_409_CONFLICT
     DETAIL = "Email de usuário já existente na base de dados."
-    
+
 
 class UserNotFound(DetailedHTTPException):
     STATUS_CODE = status.HTTP_404_NOT_FOUND

@@ -1,9 +1,8 @@
-from datetime import datetime, timedelta
-from http import HTTPStatus
-from zoneinfo import ZoneInfo
 import os
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, decode, encode
 from pwdlib import PasswordHash
@@ -11,14 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import get_session
+from .exceptions import ExpiredToken, NotAuthenticated
 from .models import User
 from .schemas import TokenData
-from .exceptions import (
-    NotAuthenticated,
-    ExpiredToken
-)
 
-#settings = Settings()
+# settings = Settings()
 ACCESS_TOKEN_EXPIRE_MINUTES = float(os.environ['ACCESS_TOKEN_EXPIRE_MINUTES'])
 ALGORITHM = os.environ['ALGORITHM']
 SECRET_KEY = os.environ['SECRET_KEY']
@@ -26,6 +22,7 @@ SECRET_KEY = os.environ['SECRET_KEY']
 pwd_context = PasswordHash.recommended()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
+
 
 def create_access_token(data: dict):
     # Cria um JWT com base nas informações especificadas no arquivo de configuração .env (importadas através da constante settings)
@@ -36,11 +33,11 @@ def create_access_token(data: dict):
     #   data: É um parâmetro contendo informações desejadas para serem incluídas no JWT (no caso, o email do usuário)
     to_encode = data.copy()
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes= ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({'exp': expire})
     encoded_jwt = encode(
-        to_encode, SECRET_KEY, algorithm= ALGORITHM
+        to_encode, SECRET_KEY, algorithm=ALGORITHM
     )
     return encoded_jwt
 

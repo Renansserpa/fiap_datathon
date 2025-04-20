@@ -1,17 +1,16 @@
-import re
 import os
-from datetime import datetime
-import dotenv
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+import re
 import time
-import pandas as pd
-#from settings import Settings
+from datetime import datetime
 
+# from settings import Settings
 from typing import Annotated
 
+import dotenv
+import pandas as pd
 from fastapi import APIRouter, Depends
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
 from .models import User
 from .schemas import (
@@ -21,12 +20,12 @@ from .security import (
     get_current_user,
 )
 
-
 router = APIRouter(prefix='/webscrapper', tags=['webscrapper'])
 CurrentUser = Annotated[User, Depends(get_current_user)]
-#settings = Settings()
+# settings = Settings()
 DOWNLOAD_PATH = os.environ['DOWNLOAD_PATH']
 NEW_NASDAQ_FILE = os.environ['NEW_NASDAQ_FILE']
+
 
 @router.post('/run/')
 def webscrapper(
@@ -60,7 +59,7 @@ def webscrapper(
     _Driver = webdriver.Chrome()
 
     # Acessar URL da Nasdaq
-    _Driver.get("https://www.nasdaq.com/market-activity/stocks/"+stock_alias+"/historical?page=1&rows_per_page=10&timeline=y10")
+    _Driver.get("https://www.nasdaq.com/market-activity/stocks/" + stock_alias + "/historical?page=1&rows_per_page=10&timeline=y10")
 
     # Aguardar 5 segundos para carregamento da página
     time.sleep(5)
@@ -91,7 +90,7 @@ def webscrapper(
     time.sleep(15)
 
     # Carregar o conteúdo do arquivo recém obtido da Nasdaq
-    _NasdaqReportOnDisk = pd.read_csv(DOWNLOAD_PATH + '/' + NEW_NASDAQ_FILE, names=['Date','Close/Last', 'Volume', 'Open', 'High', 'Low'])
+    _NasdaqReportOnDisk = pd.read_csv(DOWNLOAD_PATH + '/' + NEW_NASDAQ_FILE, names=['Date', 'Close/Last', 'Volume', 'Open', 'High', 'Low'])
 
     # Iniciar lista que conterá todas as linhas do arquivo recém obtido da Nasdaq
     _NasdaqReport = []

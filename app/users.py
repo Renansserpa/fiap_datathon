@@ -1,24 +1,15 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .database import get_session
+from .exceptions import PermissionDenied, UserAlreadyExists
 from .models import User
-from .schemas import (
-    Message,
-    UserPublic,
-    UserSchema,
-    UpdateUserSchema
-)
-
-from .exceptions import (
-    UserAlreadyExists,
-    PermissionDenied
-)
+from .schemas import Message, UpdateUserSchema, UserPublic, UserSchema
 from .security import (
     get_current_user,
     get_password_hash,

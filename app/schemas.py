@@ -6,12 +6,13 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class Message(BaseModel):
     message: str
 
+
 class UserSchema(BaseModel):
     username: str
     email: EmailStr
     password: str
-    
-    
+
+
 class UpdateUserSchema(BaseModel):
     username: str
     password: str
@@ -31,6 +32,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_email: str | None = None
+
 
 class NasdaqReportLine(BaseModel):
     date: date

@@ -1,6 +1,7 @@
+
 from fastapi import FastAPI
+
 from . import auth, users
-import os
 
 app = FastAPI()
 app.get('/')
