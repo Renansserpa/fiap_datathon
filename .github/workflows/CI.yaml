@@ -32,9 +32,6 @@ jobs:
           poetry config virtualenvs.create false
           poetry install --no-root --no-interaction --no-ansi
 
-      - name: Configurando PATH para Poetry
-        run: echo "::add-path::$(poetry config virtualenvs.path)/bin"
-
       - name: Executando testes
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
