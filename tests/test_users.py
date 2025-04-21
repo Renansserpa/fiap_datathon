@@ -50,9 +50,9 @@ def session():
 def test_create_user(client, session):
 	# Faz requisição no caminho especificado
     response = client.post(
-	   '/users/create',
-	   json={
-		    "username": usuario_teste['username'],
+        '/users/create',
+        json={
+            "username": usuario_teste['username'],
             "email": usuario_teste['email'],
             "password": usuario_teste['password']
 		}
@@ -75,9 +75,9 @@ def test_update_user(client, session):
 
     # Realiza autenticação gerando token
     token = client.post(
-	   '/auth/token',
-	   data={
-		    "username": usuario_teste["email"],
+        '/auth/token',
+        data={
+            "username": usuario_teste["email"],
             "password": usuario_teste['password']
 		},
     )
@@ -86,9 +86,9 @@ def test_update_user(client, session):
 
     # Faz requisição no caminho especificado
     response = client.put(
-	   f'/users/update/{usuario_teste["email"]}',
-	   json={
-		    "username": 'updated_user',
+        f'/users/update/{usuario_teste["email"]}',
+        json={
+            "username": 'updated_user',
             "password": usuario_teste['password']
 		},
         headers=headers
@@ -111,10 +111,10 @@ def test_delete_user(client, session):
 
     # Realiza autenticação gerando token
     token = client.post(
-	   '/auth/token',
-	   data={
-		    "username": usuario_teste["email"],
-            "password": usuario_teste['password']
+        '/auth/token',
+        data={
+        "username": usuario_teste["email"],
+        "password": usuario_teste['password']
 		},
     )
     token = token.json().get("access_token")
@@ -122,7 +122,7 @@ def test_delete_user(client, session):
 
     # Faz requisição no caminho especificado
     response = client.delete(
-	   f'/users/delete/{usuario_teste["email"]}',
+        f'/users/delete/{usuario_teste["email"]}',
         headers=headers
     )
 

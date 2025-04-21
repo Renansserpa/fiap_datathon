@@ -42,3 +42,6 @@ jobs:
           NEW_NASDAQ_FILE: ${{ secrets.NEW_NASDAQ_FILE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: poetry run pytest -s tests
+
+      - name: Aplicando Linter do Ruff com seguranca do Bandit
+        run: ruff check
