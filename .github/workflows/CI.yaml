@@ -3,7 +3,6 @@ name: Integração e ajuste do código
 on:
   push:
     branches:
-      # Regex que seleciona branches que sejam exatamente Renan, independente de maiúsculas ou minúsculas
       - renan
       - anderson
       - biel
