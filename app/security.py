@@ -1,26 +1,27 @@
-from datetime import datetime, timedelta
-from http import HTTPStatus
-from zoneinfo import ZoneInfo
 import os
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, ExpiredSignatureError, decode, encode
 from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from database import get_session
-from models import User
-from schemas import TokenData
-#from settings import Settings
+from .database import get_session
+from .exceptions import ExpiredToken, NotAuthenticated
+from .models import User
+from .schemas import TokenData
 
-#settings = Settings()
+# settings = Settings()
 ACCESS_TOKEN_EXPIRE_MINUTES = float(os.environ['ACCESS_TOKEN_EXPIRE_MINUTES'])
 ALGORITHM = os.environ['ALGORITHM']
 SECRET_KEY = os.environ['SECRET_KEY']
 
 pwd_context = PasswordHash.recommended()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
 def create_access_token(data: dict):
@@ -32,11 +33,11 @@ def create_access_token(data: dict):
     #   data: É um parâmetro contendo informações desejadas para serem incluídas no JWT (no caso, o email do usuário)
     to_encode = data.copy()
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes= ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
     to_encode.update({'exp': expire})
     encoded_jwt = encode(
-        to_encode, SECRET_KEY, algorithm= ALGORITHM
+        to_encode, SECRET_KEY, algorithm=ALGORITHM
     )
     return encoded_jwt
 
@@ -59,9 +60,6 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
-
-
 def get_current_user(
     session: Session = Depends(get_session),
     token: str = Depends(oauth2_scheme),
@@ -71,30 +69,25 @@ def get_current_user(
     # Argumentos:
     #   token: É um parâmetro contendo as informacoes do token JWT do usuário
     #   session: É apenas um parâmetro para que seja possível iniciar uma sessão com o banco de dados
-    credentials_exception = HTTPException(
-        status_code=HTTPStatus.UNAUTHORIZED,
-        detail='Could not validate credentials',
-        headers={'WWW-Authenticate': 'Bearer'},
-    )
 
     try:
         payload = decode(
             token, SECRET_KEY, algorithms=[ALGORITHM]
         )
-        username: str = payload.get('sub')
-        if not username:
-            raise credentials_exception
-        token_data = TokenData(username=username)
+        user_email: str = payload.get('sub')
+        if not user_email:
+            raise NotAuthenticated
+        token_data = TokenData(user_email=user_email)
     except DecodeError:
-        raise credentials_exception
+        raise NotAuthenticated
     except ExpiredSignatureError:
-        raise credentials_exception
+        raise ExpiredToken
 
     user = session.scalar(
-        select(User).where(User.email == token_data.username)
+        select(User).where(User.email == token_data.user_email)
     )
 
     if not user:
-        raise credentials_exception
+        raise NotAuthenticated
 
     return user

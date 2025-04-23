@@ -1,0 +1,57 @@
+name: Integração e ajuste do código
+
+on:
+  push:
+    branches:
+      - renan
+      - anderson
+      - biel
+      - lucas
+      - ruan
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+
+    permissions: 
+      pull-requests: write
+
+    steps:
+
+      - name: Baixando repositório
+        uses: actions/checkout@v4
+
+      - name: Configurando Python
+        uses: actions/setup-python@v5
+        with:
+          # Semantic version range syntax or exact version of a Python version
+          python-version: '3.11'
+          # Optional - x64 or x86 architecture, defaults to x64
+          architecture: 'x64'
+      
+      - name: Instalando as dependências
+        run: |
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-root --no-interaction --no-ansi
+
+      - name: Executando testes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ALGORITHM: ${{ secrets.ALGORITHM }}
+          DOWNLOAD_PATH: ${{ secrets.DOWNLOAD_PATH }}
+          NEW_NASDAQ_FILE: ${{ secrets.NEW_NASDAQ_FILE }}
+        run: poetry run pytest -s tests
+
+      - name: Aplicando Linter do Ruff com seguranca do Bandit
+        run: ruff check
+      
+      - name: create pull request to Dev
+        run: |
+          current_branch=$(git branch --show-current)
+          echo $current_branch
+          gh pr create -B dev -H $current_branch --title 'Merging' --body 'Created by Github action'
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

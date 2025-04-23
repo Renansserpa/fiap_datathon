@@ -1,2 +1,4 @@
 .env
 *.lock
+.venv
+.requirements.txt
