@@ -1,0 +1,114 @@
+name: Primeiro Workflow
+
+on:
+  push:
+    # Será executado quando um git push ocorrer na branch main
+    branches: [ "main" ]
+
+jobs:
+
+  increase_version:
+    runs-on: ubuntu-latest
+    outputs:
+      # Variável para incremento de versão
+      NEW_VERSION: ${{ steps.tag_increase.outputs.NEW_VERSION }}
+
+    steps:
+
+      # Fetch do repositório
+      - name: Baixando repositório
+        uses: actions/checkout@v4
+        with:
+          # Flag para download de tags
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Script bash para incremento de versão (resultado será salvo na variável 'NEW_VERSION')
+      - name: Incrementa versão
+        id: tag_increase
+        run: |
+          # Obtém a última mensagem do commit
+          last_commit=$(git log -1 --no-merges --pretty=%B)
+          echo $last_commit
+          # Se o último commit for relacionado a um patch (Ex: 0.0.1)
+          if [[ $last_commit == patch* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $3+=1; print $0}'`
+          # Se o último commit for relacionado a um minor (Ex: 0.1.0)
+          elif [[ $last_commit == minor* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $2+=1; $3=0; print $0}'`
+          # Se o último commit for relacionado a um major (Ex: 1.0.0)
+          elif [[ $last_commit == major* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; sub(/^v/, "", $1); $1+=1; $2=0; $3=0; print "v"$0}'`
+          else
+              echo "Não especifica versao, logo não executa código"
+              exit 1
+          fi
+
+          if ![[ $NEW_VERSION == v* ]]; then
+              echo "Precisa comecar com v a versão"
+              exit 1
+          fi
+
+          # Redirecionar a nova versão armazenada em 'NEW_VERSION' para a variável de ambiente do GitHub 'GITHUB_OUTPUT'
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  publish:
+    # Jobs executam em paralelo, só faz sentido seguir para 'publish' quando 'increase_version' tiver executado
+    # A palavra reservada 'needs' serve para travar a execução do 'publish' até que 'increase_version' termine
+    needs: [increase_version]
+
+    # Execução em uma máquina ubuntu
+    runs-on: ubuntu-latest
+    
+    # Variáveis de ambiente
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/datathon-ml-communication
+
+    # Permissões necessárias
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      # Cada Job é executado em uma outra máquina, por isso é necessário novamente o fetch do repositório
+      - name: Baixando repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Adiciona Tag
+
+        run: |
+          # Configuração de username
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          # Configuração de user e-mail
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
+          # Criação de nova tag
+          git tag -a "${{ needs.increase_version.outputs.NEW_VERSION }}" -m "change version"
+          git tag
+
+
+      - name: Configurando Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
+
+      - name: Instalando dependências de publicação do pacote
+        run: pip install -U build==1.2.1 twine==5.1.1
+
+
+      - name: Cria o diretório da distribuição
+        run: python -m build
+
+      - name: Publish distribution 📦 to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Update package tag
+        run: |
+          echo "${{ needs.increase_version.outputs.NEW_VERSION }}"
+          git push origin "${{ needs.increase_version.outputs.NEW_VERSION }}"
