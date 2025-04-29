@@ -1,0 +1,1143 @@
+openapi: 3.0.0
+info:
+  title: API de Recrutamento e Seleção
+  description: |
+    API para gerenciamento de processos de recrutamento e seleção, análise de candidatos e vagas.
+
+    ## Autenticação
+    Esta API utiliza autenticação JWT (JSON Web Token) para proteger os endpoints.
+    Os tokens expiram em 30 minutos após a criação.
+    
+    Para obter um token:
+    1. Faça uma solicitação POST para o endpoint `/auth/token`
+    2. Use o email do usuário como username e a senha correspondente
+    3. O token retornado deve ser incluído no cabeçalho Authorization de todas as solicitações subsequentes
+    
+    ## Segurança
+    - Senhas são armazenadas usando hash argon2
+    - Tokens JWT são assinados com o algoritmo HS256
+    - Verificação de tokens inclui validação de expiração
+    
+    ## Configuração
+    A aplicação usa as seguintes configurações definidas no arquivo .env:
+    - `DATABASE_URL`: URL de conexão com o banco de dados
+    - `SECRET_KEY`: Chave secreta para assinatura dos tokens
+    - `ALGORITHM`: Algoritmo para assinatura (HS256)
+    - `ACCESS_TOKEN_EXPIRE_MINUTES`: Tempo de expiração dos tokens em minutos
+    - `DOWNLOAD_PATH`: Caminho para salvar arquivos do webscraper
+  version: 1.0.0
+  contact:
+    name: Suporte Técnico
+    email: suporte@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Servidor de desenvolvimento
+  - url: https://api.example.com
+    description: Servidor de produção (exemplo)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Autenticação usando JWT (JSON Web Token).
+        Token expira em 30 minutos após a criação.
+        Use o endpoint /auth/token para obter um token válido.
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensagem informativa
+      required:
+        - message
+    
+    UserSchema:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Nome do usuário
+        email:
+          type: string
+          format: email
+          description: Email do usuário
+        password:
+          type: string
+          format: password
+          description: Senha do usuário
+      required:
+        - username
+        - email
+        - password
+    
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Identificador do usuário no Banco de Dados
+        username:
+          type: string
+          description: Nome do usuário
+        email:
+          type: string
+          format: email
+          description: Email do usuário
+      required:
+        - id
+        - username
+        - email
+    
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Token JWT de acesso
+        token_type:
+          type: string
+          description: Tipo do token (bearer)
+      required:
+        - access_token
+        - token_type
+    
+    TokenData:
+      type: object
+      properties:
+        username:
+          type: string
+          nullable: true
+          description: Nome de usuário armazenado no token
+    
+    # Esquema para dados coletados pelo webscraper
+    ScrapedData:
+      type: object
+      description: Dados coletados da web
+      properties:
+        id:
+          type: integer
+          description: Identificador único do registro
+        source:
+          type: string
+          description: URL da fonte ou origem dos dados
+        data:
+          type: object
+          description: Dados coletados
+        job_title:
+          type: string
+          description: Título da vaga
+        company:
+          type: string
+          description: Nome da empresa
+        location:
+          type: string
+          description: Localização da vaga
+        description:
+          type: string
+          description: Descrição completa da vaga
+        requirements:
+          type: array
+          items:
+            type: string
+          description: Requisitos da vaga
+        salary_range:
+          type: string
+          description: Faixa salarial oferecida
+        application_deadline:
+          type: string
+          format: date
+          description: Data limite para inscrição
+        collected_at:
+          type: string
+          format: date-time
+          description: Data e hora exata da coleta
+
+    # Esquema para candidato
+    Candidate:
+      type: object
+      description: Dados de um candidato
+      properties:
+        id:
+          type: integer
+          description: Identificador único do candidato
+        name:
+          type: string
+          description: Nome completo do candidato
+        email:
+          type: string
+          format: email
+          description: Email do candidato
+        phone:
+          type: string
+          description: Telefone do candidato
+        resume_url:
+          type: string
+          description: URL do currículo do candidato
+        linkedin_url:
+          type: string
+          description: URL do perfil do LinkedIn
+        skills:
+          type: array
+          items:
+            type: string
+          description: Lista de habilidades do candidato
+        experience:
+          type: array
+          items:
+            type: object
+            properties:
+              company:
+                type: string
+              position:
+                type: string
+              start_date:
+                type: string
+                format: date
+              end_date:
+                type: string
+                format: date
+              description:
+                type: string
+      required:
+        - name
+        - email
+
+    # Esquema para processo seletivo
+    SelectionProcess:
+      type: object
+      description: Dados de um processo seletivo
+      properties:
+        id:
+          type: integer
+          description: Identificador único do processo
+        title:
+          type: string
+          description: Título do processo seletivo
+        job_description:
+          type: string
+          description: Descrição detalhada da vaga
+        requirements:
+          type: array
+          items:
+            type: string
+          description: Requisitos para a vaga
+        stages:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              order:
+                type: integer
+        status:
+          type: string
+          enum: [active, closed]
+        deadline:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - title
+        - job_description
+
+paths:
+  /auth/token:
+    post:
+      tags:
+        - auth
+      summary: Login para obter token de acesso
+      description: |
+        Verifica se a combinação de usuário e senha fornecidos são válidos e retorna um JWT caso positivo.
+        O token expira em 30 minutos após a criação.
+      operationId: loginForAccessToken
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: Email do usuário
+                password:
+                  type: string
+                  format: password
+                  description: Senha do usuário
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+              example:
+                access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                token_type: "bearer"
+        '400':
+          description: Email ou senha incorretos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Incorrect email or password
+
+  # Endpoints de usuários baseados no arquivo users.py
+  /users/create:
+    post:
+      tags:
+        - users
+      summary: Criar usuário
+      description: |
+        Cria um novo usuário no sistema. Verifica se o nome de usuário ou email já existem.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSchema'
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+        '400':
+          description: Nome de usuário ou email já existem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Username already exists"
+
+  /users/update/{user_id}:
+    put:
+      tags:
+        - users
+      summary: Atualizar usuário
+      description: |
+        Atualiza os dados de um usuário existente. Apenas o próprio usuário pode atualizar seus dados.
+      operationId: updateUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID do usuário a ser atualizado
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSchema'
+      responses:
+        '200':
+          description: Usuário atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+        '403':
+          description: Sem permissão para atualizar este usuário
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Not enough permissions"
+        '409':
+          description: Nome de usuário ou email já existem
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Username or Email already exists"
+
+  /users/delete/{user_id}:
+    delete:
+      tags:
+        - users
+      summary: Excluir usuário
+      description: |
+        Remove um usuário do sistema. Apenas o próprio usuário pode excluir sua conta.
+      operationId: deleteUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: ID do usuário a ser excluído
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Usuário excluído com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "User deleted"
+        '403':
+          description: Sem permissão para excluir este usuário
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Not enough permissions"
+
+  # Endpoints para webscraping
+  /webscrapper/jobs:
+    post:
+      tags:
+        - webscraper
+      summary: Coletar dados de vagas
+      description: |
+        Inicia a coleta de dados de vagas de sites de emprego e salva no caminho definido em DOWNLOAD_PATH.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keywords:
+                  type: string
+                  description: Palavras-chave para buscar vagas (ex. "desenvolvedor python", "analista de dados")
+                location:
+                  type: string
+                  description: Localização das vagas (ex. "São Paulo", "Remoto")
+                job_type:
+                  type: string
+                  enum: [full_time, part_time, contract, internship, any]
+                  description: Tipo de trabalho (tempo integral, meio período, etc.)
+                experience_level:
+                  type: string
+                  enum: [entry, mid, senior, executive, any]
+                  description: Nível de experiência requerido
+              required:
+                - keywords
+      responses:
+        '200':
+          description: Dados coletados com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Dados de vagas coletados com sucesso para 'desenvolvedor python'"
+        '400':
+          description: Parâmetros inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Palavras-chave inválidas ou em formato incorreto"
+        '500':
+          description: Erro na coleta de dados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Erro ao coletar dados: serviço indisponível"
+
+  /webscrapper/data:
+    get:
+      tags:
+        - webscraper
+      summary: Obter dados coletados
+      description: |
+        Retorna os dados de vagas coletados pelo webscraper.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: keywords
+          in: query
+          required: false
+          description: Filtrar por palavras-chave (opcional)
+          schema:
+            type: string
+        - name: location
+          in: query
+          required: false
+          description: Filtrar por localização (opcional)
+          schema:
+            type: string
+        - name: job_type
+          in: query
+          required: false
+          description: Filtrar por tipo de trabalho (opcional)
+          schema:
+            type: string
+            enum: [full_time, part_time, contract, internship, any]
+      responses:
+        '200':
+          description: Dados coletados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScrapedData'
+        '404':
+          description: Arquivo não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Arquivo de dados de vagas não encontrado"
+
+  # Endpoints para gestão de candidatos
+  /candidates:
+    post:
+      tags:
+        - candidates
+      summary: Cadastrar candidato
+      description: Cadastra um novo candidato no sistema
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+      responses:
+        '201':
+          description: Candidato cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  email:
+                    type: string
+        '400':
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+    get:
+      tags:
+        - candidates
+      summary: Listar candidatos
+      description: Retorna a lista de candidatos cadastrados
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: skills
+          in: query
+          required: false
+          description: Filtrar por habilidades (separadas por vírgula)
+          schema:
+            type: string
+        - name: experience
+          in: query
+          required: false
+          description: Filtrar por anos mínimos de experiência
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de candidatos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    email:
+                      type: string
+                    skills:
+                      type: array
+                      items:
+                        type: string
+
+  /candidates/{candidate_id}:
+    get:
+      tags:
+        - candidates
+      summary: Obter detalhes do candidato
+      description: Retorna os detalhes completos de um candidato específico
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: candidate_id
+          in: path
+          required: true
+          description: ID do candidato
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do candidato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '404':
+          description: Candidato não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+    
+    put:
+      tags:
+        - candidates
+      summary: Atualizar candidato
+      description: Atualiza os dados de um candidato existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: candidate_id
+          in: path
+          required: true
+          description: ID do candidato
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Candidate'
+      responses:
+        '200':
+          description: Candidato atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '404':
+          description: Candidato não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+    delete:
+      tags:
+        - candidates
+      summary: Excluir candidato
+      description: Remove um candidato do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: candidate_id
+          in: path
+          required: true
+          description: ID do candidato
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Candidato excluído com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Candidato excluído com sucesso"
+        '404':
+          description: Candidato não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  # Endpoints para gestão de processos seletivos
+  /selection-processes:
+    post:
+      tags:
+        - selection
+      summary: Criar processo seletivo
+      description: Cria um novo processo seletivo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionProcess'
+      responses:
+        '201':
+          description: Processo seletivo criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+
+    get:
+      tags:
+        - selection
+      summary: Listar processos seletivos
+      description: Retorna a lista de processos seletivos ativos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrar por status do processo
+          schema:
+            type: string
+            enum: [active, closed, all]
+            default: active
+      responses:
+        '200':
+          description: Lista de processos seletivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    title:
+                      type: string
+                    deadline:
+                      type: string
+                      format: date
+                    created_at:
+                      type: string
+                      format: date-time
+                    candidate_count:
+                      type: integer
+
+  /selection-processes/{process_id}:
+    get:
+      tags:
+        - selection
+      summary: Obter detalhes do processo
+      description: Retorna os detalhes completos de um processo seletivo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes do processo seletivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectionProcess'
+        '404':
+          description: Processo seletivo não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+    
+    put:
+      tags:
+        - selection
+      summary: Atualizar processo seletivo
+      description: Atualiza os dados de um processo seletivo existente
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionProcess'
+      responses:
+        '200':
+          description: Processo seletivo atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectionProcess'
+        '404':
+          description: Processo seletivo não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+    
+    delete:
+      tags:
+        - selection
+      summary: Excluir processo seletivo
+      description: Remove um processo seletivo do sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Processo seletivo excluído com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Processo seletivo excluído com sucesso"
+        '404':
+          description: Processo seletivo não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /selection-processes/{process_id}/candidates:
+    post:
+      tags:
+        - selection
+      summary: Adicionar candidato ao processo
+      description: Vincula um candidato existente a um processo seletivo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                candidate_id:
+                  type: integer
+                  description: ID do candidato
+                notes:
+                  type: string
+                  description: Observações sobre o candidato
+              required:
+                - candidate_id
+      responses:
+        '201':
+          description: Candidato adicionado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Candidato adicionado ao processo seletivo"
+        '404':
+          description: Processo seletivo ou candidato não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+    get:
+      tags:
+        - selection
+      summary: Listar candidatos do processo
+      description: Retorna a lista de candidatos vinculados a um processo seletivo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+        - name: stage
+          in: query
+          required: false
+          description: Filtrar por etapa do processo
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de candidatos do processo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    candidate_id:
+                      type: integer
+                    name:
+                      type: string
+                    current_stage:
+                      type: string
+                    status:
+                      type: string
+                    applied_at:
+                      type: string
+                      format: date-time
+
+  /selection-processes/{process_id}/candidates/{candidate_id}/stage:
+    put:
+      tags:
+        - selection
+      summary: Atualizar etapa do candidato
+      description: Atualiza a etapa atual do candidato no processo seletivo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: process_id
+          in: path
+          required: true
+          description: ID do processo seletivo
+          schema:
+            type: integer
+        - name: candidate_id
+          in: path
+          required: true
+          description: ID do candidato
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stage:
+                  type: string
+                  description: Nova etapa do candidato
+                status:
+                  type: string
+                  enum: [in_progress, approved, rejected]
+                  description: Status do candidato na etapa
+                feedback:
+                  type: string
+                  description: Feedback sobre o candidato nesta etapa
+              required:
+                - stage
+                - status
+      responses:
+        '200':
+          description: Etapa atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example:
+                message: "Etapa do candidato atualizada com sucesso"
+        '404':
+          description: Processo seletivo, candidato ou etapa não encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  # Endpoints para análise e relatórios
+  /analytics/candidate-matching:
+    post:
+      tags:
+        - analytics
+      summary: Análise de compatibilidade de candidatos
+      description: Analisa a compatibilidade dos candidatos com uma vaga específica
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                process_id:
+                  type: integer
+                  description: ID do processo seletivo
+                weights:
+                  type: object
+                  description: Pesos para diferentes critérios de avaliação
+                  properties:
+                    skills:
+                      type: number
+                      format: float
+                      description: Peso para habilidades técnicas
+                    experience:
+                      type: number
+                      format: float
+                      description: Peso para experiência
+              required:
+                - process_id
+      responses:
+        '200':
+          description: Resultado da análise de compatibilidade
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    candidate_id:
+                      type: integer
+                    name:
+                      type: string
+                    match_score:
+                      type: number
+                      format: float
+                    strengths:
+                      type: array
+                      items:
+                        type: string
+                    gaps:
+                      type: array
+                      items:
+                        type: string
+        '404':
+          description: Processo seletivo não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  /analytics/recruitment-metrics:
+    get:
+      tags:
+        - analytics
+      summary: Métricas de recrutamento
+      description: Retorna métricas sobre os processos de recrutamento
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          required: false
+          description: Data inicial para o período de análise
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          description: Data final para o período de análise
+          schema:
+            type: string
+            format: date
+        - name: process_id
+          in: query
+          required: false
+          description: ID do processo seletivo específico (opcional)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Métricas de recrutamento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time_to_fill:
+                    type: number
+                    format: float
+                    description: Tempo médio para preencher vagas (em dias)
+                  application_rate:
+                    type: number
+                    format: float
+                    description: Taxa de aplicação por vaga
+                  dropout_rate:
+                    type: number
+                    format: float
+                    description: Taxa de desistência durante o processo
+                  conversion_rates:
+                    type: object
+                    description: Taxas de conversão entre etapas do processo
+                  source_effectiveness:
+                    type: object
+                    description: Efetividade de diferentes fontes de candidatos
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: Operações de autenticação
+  - name: users
+    description: Operações relacionadas a usuários
+  - name: webscraper
+    description: Operações de coleta de dados da web
+  - name: candidates
+    description: Operações relacionadas a candidatos
+  - name: selection
+    description: Operações de processos seletivos
+  - name: analytics
+    description: Operações de análise e relatórios
