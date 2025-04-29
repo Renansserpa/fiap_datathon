@@ -30,13 +30,13 @@ jobs:
           # Obtém a última mensagem do commit
           last_commit=$(git log -1 --no-merges --pretty=%B)
           echo $last_commit
-          # Se o último commit for relacionado a um patch (Ex: 0.0.1)
+          # Se o último commit for relacionado a um patch (Ex: v0.0.1)
           if [[ $last_commit == patch* ]]; then
               NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $3+=1; print $0}'`
-          # Se o último commit for relacionado a um minor (Ex: 0.1.0)
+          # Se o último commit for relacionado a um minor (Ex: v0.1.0)
           elif [[ $last_commit == minor* ]]; then
               NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $2+=1; $3=0; print $0}'`
-          # Se o último commit for relacionado a um major (Ex: 1.0.0)
+          # Se o último commit for relacionado a um major (Ex: v1.0.0)
           elif [[ $last_commit == major* ]]; then
               NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; sub(/^v/, "", $1); $1+=1; $2=0; $3=0; print "v"$0}'`
           else
@@ -63,7 +63,7 @@ jobs:
     # Variáveis de ambiente
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/datathon-ml-communication
+      url: https://test.pypi.org/p/datathon-fiap-aglrr-ml-communication
 
     # Permissões necessárias
     permissions:
