@@ -3,7 +3,7 @@ name: Primeiro Workflow
 on:
   push:
     # Será executado quando um git push ocorrer na branch main
-    branches: [ "main" ]
+    branches: [ "lucas" ]
 
 jobs:
 
@@ -61,11 +61,11 @@ jobs:
     runs-on: ubuntu-latest
     
     # Variáveis de ambiente
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/datathon-fiap-aglrr-ml-communication
+    #environment:
+      #name: testpypi
+      #url: https://test.pypi.org/p/datathon-fiap-aglrr-ml-communication
 
-    # Permissões necessárias
+    # Permissões necessárias no repositório para atualização da tag
     permissions:
       contents: write
       id-token: write
@@ -75,11 +75,11 @@ jobs:
       - name: Baixando repositório
         uses: actions/checkout@v4
         with:
+          # Flag para download de tags
           fetch-depth: 0
           fetch-tags: true
 
       - name: Adiciona Tag
-
         run: |
           # Configuração de username
           git config user.name "$(git log -n 1 --pretty=format:%an)"
@@ -89,24 +89,11 @@ jobs:
           git tag -a "${{ needs.increase_version.outputs.NEW_VERSION }}" -m "change version"
           git tag
 
-
-      - name: Configurando Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          architecture: 'x64'
-
-      - name: Instalando dependências de publicação do pacote
-        run: pip install -U build==1.2.1 twine==5.1.1
-
-
-      - name: Cria o diretório da distribuição
-        run: python -m build
-
-      - name: Publish distribution 📦 to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+      - name: Construir imagem Docker
+        run: docker --debug build -t "fiap_datathon" .
+    
+      - name: Listar imagens Docker (para verificar se ocorreu tudo certo com o build)
+        run: docker image ls
 
       - name: Update package tag
         run: |
