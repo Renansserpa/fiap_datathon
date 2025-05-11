@@ -72,6 +72,7 @@ jobs:
 
     steps:
       # Cada Job é executado em uma outra máquina, por isso é necessário novamente o fetch do repositório
+      # Fetch do repositório
       - name: Baixando repositório
         uses: actions/checkout@v4
         with:
