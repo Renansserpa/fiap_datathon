@@ -1,5 +1,5 @@
-# Utilização da distribuição Debian Bookworm com o Python na versão 3.12.9 instalado
-FROM python:3.11.11-bookworm
+# Utilização da distribuição Debian Bookworm com o Python na versão 3.12 mais recente instalada
+FROM python:3.12-bookworm
 
 # Variável para o poetry não criar um virtual environment
 #ENV POETRY_VIRTUALENVS_CREATE=false
