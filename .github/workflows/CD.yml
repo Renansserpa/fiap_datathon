@@ -1,13 +1,15 @@
-name: Primeiro Workflow
+name: CD (Incremento de versão / Compilação e publicação de imagem do docker no Docker Hub)
 
 on:
   push:
-    # Será executado quando um git push ocorrer na branch main
-    branches: [ "lucas" ]
+    # O workflow será executado quando o evento "git push" ocorrer na branch main
+    branches: [ "main" ]
 
 jobs:
 
+  # Job responsável por determinar e incrementar a versão
   increase_version:
+    # Especificação da máquina virtual (runner) onde o job será executado, neste caso, 'ubuntu-latest' (versão estável mais recente do Ubuntu)
     runs-on: ubuntu-latest
     outputs:
       # Variável para incremento de versão
@@ -15,11 +17,13 @@ jobs:
 
     steps:
 
-      # Fetch do repositório
+      # Fetch do repositório para o runner
       - name: Baixando repositório
         uses: actions/checkout@v4
         with:
           # Flag para download de tags
+          #   'fetch-depth: 0' especifica para baixar todo o histórico do Git (necessário para 'git describe --tags')
+          #   'fetch-tags: true' especifica que todas as tags do repositório sejam baixadas
           fetch-depth: 0
           fetch-tags: true
 
@@ -53,28 +57,30 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
 
   publish:
-    # Jobs executam em paralelo, só faz sentido seguir para 'publish' quando 'increase_version' tiver executado
-    # A palavra reservada 'needs' serve para travar a execução do 'publish' até que 'increase_version' termine
+    # Jobs executam em paralelo, só faz sentido seguir para 'publish' quando 'increase_version' já tiver executado
+    # A palavra reservada 'needs' serve para travar a execução do 'publish' até que 'increase_version' tenha sido executado com sucesso
     needs: [increase_version]
 
-    # Execução em uma máquina ubuntu
+    # Especificação da máquina virtual (runner) onde o job será executado, neste caso, 'ubuntu-latest' (versão estável mais recente do Ubuntu)
     runs-on: ubuntu-latest
     
-    # Permissões necessárias no repositório para atualização da tag
+    # Permissões necessárias no repositório para atualização da tag e push
     permissions:
       contents: write
-      id-token: write
 
     steps:
       # Cada Job é executado em uma outra máquina, por isso é necessário novamente o fetch do repositório
-      # Fetch do repositório
+      # Fetch do repositório para o runner
       - name: Baixando repositório
         uses: actions/checkout@v4
         with:
           # Flag para download de tags
+          #   'fetch-depth: 0' especifica para baixar todo o histórico do Git (necessário para 'git describe --tags')
+          #   'fetch-tags: true' especifica que todas as tags do repositório sejam baixadas
           fetch-depth: 0
           fetch-tags: true
-
+      
+      # Adicionar a nova tag Git localmente
       - name: Adiciona Tag
         run: |
           # Configuração de username
@@ -87,20 +93,22 @@ jobs:
 
       # Autenticação no Docker Hub
       - name: Autenticação no Docker Hub
+        # O comando 'docker login' é usado para se autenticar no Docker Hub
+        # '${{ secrets.DOCKER_PASSWORD }}' e '${{ secrets.DOCKER_USERNAME }}' são secrets configuradas no repositório GitHub para armazenar de forma segura o usuário e senha do Docker Hub
+        # '--password-stdin' permite passar a senha via entrada padrão (o que é mais seguro do que passá-la diretamente como argumento do comando uma vez que ficaria gravada no histórico do bash)
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
-      # Construir e publicar a imagem do docker do Docker Hub através da conta logada no processo de autenticação anterior
+      # Construir e publicar a imagem do docker no Docker Hub através da conta autenticada no processo anterior
       - name: Build e Push de imagem
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/"fiap_datathon:latest" .
           docker push ${{ secrets.DOCKER_USERNAME }}/"fiap_datathon:latest"
 
-      #- name: Construir imagem Docker
-      #  run: docker --debug build -t "fiap_datathon" .
-    
+      # Listar as imagens do docker disponíveis no runner após o build
       - name: Listar imagens Docker (para verificar se ocorreu tudo certo com o build)
         run: docker image ls
 
+      # Enviar (push) a nova tag Git para o repositório
       - name: Update package tag
         run: |
           echo "${{ needs.increase_version.outputs.NEW_VERSION }}"
