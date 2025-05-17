@@ -3,7 +3,7 @@ name: CD (Incremento de versão / Compilação e publicação de imagem do docke
 on:
   push:
     # O workflow será executado quando o evento "git push" ocorrer na branch main
-    branches: [ "lucas" ]
+    branches: [ "main" ]
 
 jobs:
 
