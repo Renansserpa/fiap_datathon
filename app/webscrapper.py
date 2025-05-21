@@ -1,30 +1,31 @@
-import re
 import os
-from datetime import datetime
-import dotenv
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
+import re
 import time
-import pandas as pd
-from settings import Settings
+from datetime import datetime
 
+# from settings import Settings
 from typing import Annotated
 
+import dotenv
+import pandas as pd
 from fastapi import APIRouter, Depends
+from selenium import webdriver
+from selenium.webdriver.common.by import By
 
-from models import User
-from schemas import (
+from .models import User
+from .schemas import (
     NasdaqReportLine,
 )
-from security import (
+from .security import (
     get_current_user,
 )
 
-
 router = APIRouter(prefix='/webscrapper', tags=['webscrapper'])
 CurrentUser = Annotated[User, Depends(get_current_user)]
-settings = Settings()
+# settings = Settings()
+DOWNLOAD_PATH = os.environ['DOWNLOAD_PATH']
+NEW_NASDAQ_FILE = os.environ['NEW_NASDAQ_FILE']
+
 
 @router.post('/run/')
 def webscrapper(
@@ -48,7 +49,7 @@ def webscrapper(
     # Enumerar arquivos da Nasdaq já existentes do diretório Downloads
     # O caminho para o diretório Downloads é especificado no arquivo de configuração do projeto (.env localizado na raiz do projeto)
     _NasdaqFiles = []
-    with os.scandir(settings.DOWNLOAD_PATH) as _DownloadsFiles:
+    with os.scandir(DOWNLOAD_PATH) as _DownloadsFiles:
         for _File in _DownloadsFiles:
             if _Pattern.match(_File.name):
                 _NasdaqFiles.append(_File.name)
@@ -58,7 +59,7 @@ def webscrapper(
     _Driver = webdriver.Chrome()
 
     # Acessar URL da Nasdaq
-    _Driver.get("https://www.nasdaq.com/market-activity/stocks/"+stock_alias+"/historical?page=1&rows_per_page=10&timeline=y10")
+    _Driver.get("https://www.nasdaq.com/market-activity/stocks/" + stock_alias + "/historical?page=1&rows_per_page=10&timeline=y10")
 
     # Aguardar 5 segundos para carregamento da página
     time.sleep(5)
@@ -77,7 +78,7 @@ def webscrapper(
 
     # Identificar arquivo recém obtido da Nasdaq e armazenar seu nome de arquivo no sistema na variável NEW_NASDAQ_FILE do arquivo .env
     _NewNasdaqFile = ""
-    with os.scandir(settings.DOWNLOAD_PATH) as _DownloadsFiles:
+    with os.scandir(DOWNLOAD_PATH) as _DownloadsFiles:
         for _File in _DownloadsFiles:
             if _Pattern.match(_File.name) and _File.name not in _NasdaqFiles:
                 dotenv_file = dotenv.find_dotenv()
@@ -89,7 +90,7 @@ def webscrapper(
     time.sleep(15)
 
     # Carregar o conteúdo do arquivo recém obtido da Nasdaq
-    _NasdaqReportOnDisk = pd.read_csv(settings.DOWNLOAD_PATH+'/'+settings.NEW_NASDAQ_FILE, names=['Date','Close/Last', 'Volume', 'Open', 'High', 'Low'])
+    _NasdaqReportOnDisk = pd.read_csv(DOWNLOAD_PATH + '/' + NEW_NASDAQ_FILE, names=['Date', 'Close/Last', 'Volume', 'Open', 'High', 'Low'])
 
     # Iniciar lista que conterá todas as linhas do arquivo recém obtido da Nasdaq
     _NasdaqReport = []
