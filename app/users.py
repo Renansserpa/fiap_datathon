@@ -1,19 +1,16 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from database import get_session
-from models import User
-from schemas import (
-    Message,
-    UserPublic,
-    UserSchema,
-)
-from security import (
+from .database import get_session
+from .exceptions import PermissionDenied, UserAlreadyExists
+from .models import User
+from .schemas import Message, UpdateUserSchema, UserPublic, UserSchema
+from .security import (
     get_current_user,
     get_password_hash,
 )
@@ -32,21 +29,12 @@ def create_user(user: UserSchema, session: Session):
     #   session: É apenas um parâmetro para que seja possível iniciar uma sessão com o banco de dados
     db_user = session.scalar(
         select(User).where(
-            (User.username == user.username) | (User.email == user.email)
+            User.email == user.email
         )
     )
 
     if db_user:
-        if db_user.username == user.username:
-            raise HTTPException(
-                status_code=HTTPStatus.BAD_REQUEST,
-                detail='Username already exists',
-            )
-        elif db_user.email == user.email:
-            raise HTTPException(
-                status_code=HTTPStatus.BAD_REQUEST,
-                detail='Email already exists',
-            )
+        raise UserAlreadyExists
 
     hashed_password = get_password_hash(user.password)
 
@@ -63,10 +51,10 @@ def create_user(user: UserSchema, session: Session):
     return db_user
 
 
-@router.put('/update/{user_id}', response_model=UserPublic)
+@router.put('/update/{user_email}', response_model=UserPublic)
 def update_user(
-    user_id: int,
-    user: UserSchema,
+    user_email: str,
+    user: UpdateUserSchema,
     session: Session,
     current_user: CurrentUser,
 ):
@@ -77,30 +65,25 @@ def update_user(
     #   user: É um parâmetro contendo as alterações para o usuario especificado no parâmetro anterior
     #   current_user: É um parâmetro contendo o usuario atual logado na API (se não estiver logado não será possível realizar a atualização)
     #   session: É apenas um parâmetro para que seja possível iniciar uma sessão com o banco de dados
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
-        )
+    if current_user.email != user_email:
+        raise PermissionDenied
 
     try:
         current_user.username = user.username
         current_user.password = get_password_hash(user.password)
-        current_user.email = user.email
+        current_user.email = current_user.email
         session.commit()
         session.refresh(current_user)
 
         return current_user
 
     except IntegrityError:
-        raise HTTPException(
-            status_code=HTTPStatus.CONFLICT,
-            detail='Username or Email already exists',
-        )
+        raise UserAlreadyExists
 
 
-@router.delete('/delete/{user_id}', response_model=Message)
+@router.delete('/delete/{user_email}', response_model=Message)
 def delete_user(
-    user_id: int,
+    user_email: str,
     session: Session,
     current_user: CurrentUser,
 ):
@@ -110,10 +93,8 @@ def delete_user(
     #   user_id: É um parâmetro contendo o id de banco de dados do usuário desejado (a ser removido)
     #   current_user: É um parâmetro contendo o usuario atual logado na API (se não estiver logado não será possível realizar a remoção)
     #   session: É apenas um parâmetro para que seja possível iniciar uma sessão com o banco de dados
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail='Not enough permissions'
-        )
+    if current_user.email != user_email:
+        raise PermissionDenied
 
     session.delete(current_user)
     session.commit()

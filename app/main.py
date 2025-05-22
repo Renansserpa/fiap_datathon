@@ -1,9 +1,12 @@
+
 from fastapi import FastAPI
 import auth, users, webscrapper
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 app = FastAPI()
+app.get('/')
+
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(webscrapper.router)

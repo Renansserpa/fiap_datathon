@@ -8,9 +8,15 @@ class Message(BaseModel):
     message: str
 
 
+
 class UserSchema(BaseModel):
     username: str
     email: EmailStr
+    password: str
+
+
+class UpdateUserSchema(BaseModel):
+    username: str
     password: str
 
 
