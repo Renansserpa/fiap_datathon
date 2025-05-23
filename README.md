@@ -10,7 +10,7 @@ Todo esse processo foi encapsulado em uma solução modular, permitindo fácil i
 
 ### Link Video:
 
-- [Video Explicativo do Projeto]()
+- [Video Explicativo do Projeto](https://youtu.be/8xHsN9XxGtg)
 
 ## Configurações de ambiente
 
@@ -72,16 +72,20 @@ docker run -p 8000:8000 --rm -it -e DATABASE_URL=sqlite:///database.db -e ACCESS
 ## Funcionalidades Aplicadas
 
 ### Docker
+
 Para garantir a portabilidade do ambiente de desenvolvimento e produção através de:
+
 - Isolamento, containers contendo todas as dependências e configurações necessárias para o projeto, sem interferência por outros softwares;,
 - Execução padronizada, da mesma forma em qualquer lugar (máquina local, servidor de desenvolvimento ou de produção, etc);,
 - Gerenciamento de dependências, através do poetry para assegurar que as versões corretas das bibliotecas sejam instaladas.,
 - Implantação consistente, pois a imagem docker já encapsula todo o ambiente.
 
 ### CI (Integração Contínua)
+
 Para automatizar a integração de código, testes e validações, detectando erros rapidamente. Isso acelera o desenvolvimento, reduz riscos e garante a entrega de software mais estável e confiável.
 
 ### CD (Entrega Contínua)
+
 Para automatizar a entrega de software para produção, após o CI. Isso garante implantações rápidas e seguras, tornando possível a disponibilização contínua da versão mais recente do software aos usuários.
 
 ### FastAPI
@@ -95,4 +99,3 @@ Para permite construir APIs web de alta performance de forma rápida e eficiente
 - Lucas Soares - RM 356607
 - Renan Serpa - RM 357478
 - Ruan Costa - RM 357702
-
