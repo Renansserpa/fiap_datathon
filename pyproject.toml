@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "api"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = {extras = ["standard"], version = "^0.115.5"}
+pyjwt = "^2.10.1"
+pwdlib = {extras = ["argon2"], version = "^0.2.1"}
+sqlalchemy = "^2.0.36"
+pydantic = "^2.10.3"
+pydantic-settings = "^2.6.1"
+pandas = "^2.2.3"
+selenium = "^4.27.1"
+seaborn = "^0.13.2"
+scipy = "^1.14.1"
+matplotlib = "^3.10.0"
+mplfinance = "^0.12.10b0"
+scikit-learn = "^1.6.0"
+tensorflow = "^2.18.0"
+statsmodels = "^0.14.4"
+pytest = "^8.3.5"
+pytest-cov = "^6.0.0"
+ruff = "^0.11.6"
+sentence-transformers = "^4.1.0"
+xgboost = "^2.1.3"
+omegaconf = "^2.3.0"
+mlflow = "^2.22.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 79
+extend-exclude = ['migrations']
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT', 'S']
+ignore = ["E501", "W292", "W191", "E502", "S101"]

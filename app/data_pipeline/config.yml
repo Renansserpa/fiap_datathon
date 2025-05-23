@@ -1,0 +1,14 @@
+parameters:
+  # n_estimators é análogo ao num_iterations/num_round do LightGBM
+  n_estimators: 100 # Um valor comum, ajuste conforme necessidade
+  max_depth: 3
+  random_state: 23
+  # objective e eval_metric são frequentemente especificados no XGBoost
+  objective: binary:logistic # Para problemas de classificação binária
+  eval_metric: logloss # Uma métrica de avaliação comum para classificação
+  # verbosity no XGBoost tem valores diferentes do LightGBM
+  # 0 para silencioso, 1 para mensagens de aviso, 2 para mensagens de depuração
+  verbosity: 0 # Equivalente a -1 no LightGBM para modo silencioso
+
+tracking_uri:
+experiment_name: fiap-datathon-train
