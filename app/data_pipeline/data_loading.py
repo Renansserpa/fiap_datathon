@@ -1,5 +1,7 @@
-import pandas as pd
 import json
+
+import pandas as pd
+
 
 class DataLoader:
     """Classe para carregar dados de candidatos, vagas e prospecção a partir de arquivos JSON."""
@@ -198,7 +200,7 @@ class DataLoader:
                     "habilidades_comportamentais_necessarias": beneficios.get("habilidades_comportamentais_necessarias", ""),
                     "nome_substituto": beneficios.get("nome_substituto", "")
                 })
-    
+
                 vagas_list.append(linha)
 
             return pd.DataFrame(vagas_list)
@@ -206,7 +208,7 @@ class DataLoader:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Erro ao carregar vagas: {e}")
             return pd.DataFrame()
-        
+
     def load_prospects(self, file_name: str) -> pd.DataFrame:
         """
         Carrega prospecções a partir de um arquivo JSON e converte para um DataFrame do pandas.
@@ -248,9 +250,3 @@ class DataLoader:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Erro ao carregar prospects: {e}")
             return pd.DataFrame()
-
-#Exemplo de uso:        
-#import os
-#loader = DataLoader(os.getcwd())
-#df = loader.load_prospects("prospects.json")
-#df.head()

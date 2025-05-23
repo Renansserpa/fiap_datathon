@@ -1,5 +1,5 @@
+
 import pandas as pd
-from typing import List
 
 
 class CleanApplicants:
@@ -12,7 +12,7 @@ class CleanApplicants:
         :param df: DataFrame contendo os dados dos aplicantes.
         """
         self.df = df.copy()
-        
+
         # Colunas que devem ser tratadas como tipo texto
         self.colunas_str = [
             "telefone_recado", "telefone", "infos_basicas_objetivo_profissional",
@@ -32,19 +32,18 @@ class CleanApplicants:
             "unidade", "nome_superior_imediato", "email_superior_imediato",
             "cv_pt", "cv_en"
         ]
-        
+
         # Colunas que devem ser tratadas como tipo data
         self.colunas_data = [
             "infos_basicas_data_criacao", "infos_basicas_data_atualizacao", "data_nascimento",
             "data_admissao", "data_ultima_promocao"
         ]
 
-
         # Colunas que devem ser tratadas como tipo inteiro
         self.colunas_int = [
             "infos_basicas_codigo_profissional", "id_applicants", "id_ibrati"
         ]
-        
+
     def clean_remuneracao(self) -> None:
         """Limpa e converte a coluna 'remuneracao' para float."""
         self.df["remuneracao"] = (
@@ -80,15 +79,10 @@ class CleanApplicants:
         """Executa todas as funções de limpeza."""
         self.clean_remuneracao()
         self.convert_to_string()
-        #self.convert_to_datetime()
+        # self.convert_to_datetime()
         self.convert_to_int()
 
         return self.df
-
-# Exemplo de uso:
-#cleaner = CleanApplicants(df_appli)
-#df_applicants_clean = cleaner.clean_all()
-#df_applicants_clean.head()
 
 
 class CleanVagas:
@@ -101,7 +95,7 @@ class CleanVagas:
         :param df: DataFrame contendo os dados das vagas.
         """
         self.df = df.copy()
-        
+
         # Colunas que devem ser tratadas como tipo texto
         self.colunas_string = [
             'titulo_vaga', 'vaga_sap', 'cliente', 'solicitante_cliente',
@@ -117,8 +111,7 @@ class CleanVagas:
             'valor_compra_1', 'valor_compra_2', 'habilidades_comportamentais_necessarias',
             'nome_substituto'
         ]
-        
-        
+
         # Colunas que devem ser tratadas como tipo data
         self.colunas_data = [
             'data_requicisao', 'limite_esperado_para_contratacao',
@@ -129,7 +122,7 @@ class CleanVagas:
         self.colunas_int = [
             'id_vaga'
         ]
-        
+
     @staticmethod
     def limpar_valor(valor: str) -> float:
         """Limpa e converte valores monetários para float."""
@@ -178,7 +171,7 @@ class CleanVagas:
         categorias = set()
         if not tipo or tipo.strip() == "":
             return "Vazio/Indefinido"
-        
+
         if "CLT Full" in tipo or "CLT Cotas" in tipo:
             categorias.add("CLT")
         if "PJ/Autônomo" in tipo:
@@ -191,7 +184,7 @@ class CleanVagas:
             categorias.add("Hunting")
         if "Candidato poderá escolher" in tipo:
             categorias.add("Escolha do Candidato")
-        
+
         return ", ".join(sorted(categorias))
 
     def clean_tipo_contratacao(self) -> None:
@@ -208,11 +201,6 @@ class CleanVagas:
 
         return self.df
 
-# Exemplo de uso:
-#cleaner = CleanVagas(df_vagas)
-#df_vagas_clean = cleaner.clean_all()
-#df_vagas_clean.head()
-
 
 class CleanProspects:
     """Classe para realizar a limpeza e conversão de tipos no DataFrame de prospects."""
@@ -224,12 +212,12 @@ class CleanProspects:
         :param df: DataFrame contendo os dados das prospecções.
         """
         self.df = df.copy()
-        
+
         # Colunas que devem ser tratadas como tipo texto
         self.colunas_string = [
             "titulo", "modalidade", "nome", "situacao_candidado", "comentario", "recrutador"
         ]
-        
+
         # Colunas que devem ser tratadas como tipo data
         self.colunas_data = [
             'data_candidatura', 'ultima_atualizacao'
@@ -263,11 +251,5 @@ class CleanProspects:
         self.convert_to_datetime()
         self.convert_to_string()
         self.convert_to_int()
-        
-        return self.df
-    
 
-# Exemplo de uso:
-#cleaner = CleanProspects(df_prospects)
-#df_prospects_clean = cleaner.clean_all()
-#df_prospects_clean
+        return self.df

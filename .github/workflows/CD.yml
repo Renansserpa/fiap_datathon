@@ -1,0 +1,115 @@
+name: CD (Incremento de versão / Compilação e publicação de imagem do docker no Docker Hub)
+
+on:
+  push:
+    # O workflow será executado quando o evento "git push" ocorrer na branch main
+    branches: [ "main" ]
+
+jobs:
+
+  # Job responsável por determinar e incrementar a versão
+  increase_version:
+    # Especificação da máquina virtual (runner) onde o job será executado, neste caso, 'ubuntu-latest' (versão estável mais recente do Ubuntu)
+    runs-on: ubuntu-latest
+    outputs:
+      # Variável para incremento de versão
+      NEW_VERSION: ${{ steps.tag_increase.outputs.NEW_VERSION }}
+
+    steps:
+
+      # Fetch do repositório para o runner
+      - name: Baixando repositório
+        uses: actions/checkout@v4
+        with:
+          # Flag para download de tags
+          #   'fetch-depth: 0' especifica para baixar todo o histórico do Git (necessário para 'git describe --tags')
+          #   'fetch-tags: true' especifica que todas as tags do repositório sejam baixadas
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Script bash para incremento de versão (resultado será salvo na variável 'NEW_VERSION')
+      - name: Incrementa versão
+        id: tag_increase
+        run: |
+          # Obtém a última mensagem do commit
+          last_commit=$(git log -1 --no-merges --pretty=%B)
+          echo $last_commit
+          # Se o último commit for relacionado a um patch (Ex: v0.0.1)
+          if [[ $last_commit == patch* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $3+=1; print $0}'`
+          # Se o último commit for relacionado a um minor (Ex: v0.1.0)
+          elif [[ $last_commit == minor* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; $2+=1; $3=0; print $0}'`
+          # Se o último commit for relacionado a um major (Ex: v1.0.0)
+          elif [[ $last_commit == major* ]]; then
+              NEW_VERSION=`git describe --tags --abbrev=0 | awk -F. '{OFS="."; sub(/^v/, "", $1); $1+=1; $2=0; $3=0; print "v"$0}'`
+          else
+              echo "Não especifica versao, logo não executa código"
+              exit 1
+          fi
+
+          if ![[ $NEW_VERSION == v* ]]; then
+              echo "Precisa comecar com v a versão"
+              exit 1
+          fi
+
+          # Redirecionar a nova versão armazenada em 'NEW_VERSION' para a variável de ambiente do GitHub 'GITHUB_OUTPUT'
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  publish:
+    # Jobs executam em paralelo, só faz sentido seguir para 'publish' quando 'increase_version' já tiver executado
+    # A palavra reservada 'needs' serve para travar a execução do 'publish' até que 'increase_version' tenha sido executado com sucesso
+    needs: [increase_version]
+
+    # Especificação da máquina virtual (runner) onde o job será executado, neste caso, 'ubuntu-latest' (versão estável mais recente do Ubuntu)
+    runs-on: ubuntu-latest
+    
+    # Permissões necessárias no repositório para atualização da tag e push
+    permissions:
+      contents: write
+
+    steps:
+      # Cada Job é executado em uma outra máquina, por isso é necessário novamente o fetch do repositório
+      # Fetch do repositório para o runner
+      - name: Baixando repositório
+        uses: actions/checkout@v4
+        with:
+          # Flag para download de tags
+          #   'fetch-depth: 0' especifica para baixar todo o histórico do Git (necessário para 'git describe --tags')
+          #   'fetch-tags: true' especifica que todas as tags do repositório sejam baixadas
+          fetch-depth: 0
+          fetch-tags: true
+      
+      # Adicionar a nova tag Git localmente
+      - name: Adiciona Tag
+        run: |
+          # Configuração de username
+          git config user.name "$(git log -n 1 --pretty=format:%an)"
+          # Configuração de user e-mail
+          git config user.email "$(git log -n 1 --pretty=format:%ae)"
+          # Criação de nova tag
+          git tag -a "${{ needs.increase_version.outputs.NEW_VERSION }}" -m "change version"
+          git tag
+
+      # Autenticação no Docker Hub
+      - name: Autenticação no Docker Hub
+        # O comando 'docker login' é usado para se autenticar no Docker Hub
+        # '${{ secrets.DOCKER_PASSWORD }}' e '${{ secrets.DOCKER_USERNAME }}' são secrets configuradas no repositório GitHub para armazenar de forma segura o usuário e senha do Docker Hub
+        # '--password-stdin' permite passar a senha via entrada padrão (o que é mais seguro do que passá-la diretamente como argumento do comando uma vez que ficaria gravada no histórico do bash)
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      # Construir e publicar a imagem do docker no Docker Hub através da conta autenticada no processo anterior
+      - name: Build e Push de imagem
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/"fiap_datathon:latest" .
+          docker push ${{ secrets.DOCKER_USERNAME }}/"fiap_datathon:latest"
+
+      # Listar as imagens do docker disponíveis no runner após o build
+      - name: Listar imagens Docker (para verificar se ocorreu tudo certo com o build)
+        run: docker image ls
+
+      # Enviar (push) a nova tag Git para o repositório
+      - name: Update package tag
+        run: |
+          echo "${{ needs.increase_version.outputs.NEW_VERSION }}"
+          git push origin "${{ needs.increase_version.outputs.NEW_VERSION }}"
