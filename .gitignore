@@ -2,3 +2,6 @@
 .venv
 requirements.txt
 **.pyc
+*.json
+*df_to_model_predict.parquet
+df_to_model.parquet

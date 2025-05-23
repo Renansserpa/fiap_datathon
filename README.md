@@ -1,16 +1,16 @@
-# Rede Neural (LSTM) - Amazon Stock
-## DELETAR
-Comando do docker: docker run -p 8000:8000 --rm -it -e DATABASE_URL=sqlite:///database.db -e ACCESS_TOKEN_EXPIRE_MINUTES=30 -e SECRET_KEY=b71dc0943459ff1e7e668af25342877d641a76967061ba620fc2da7104aa1b37 -e ALGORITHM=HS256 -e DOWNLOAD_PATH=/app -e NEW_NASDAQ_FILE=HistoricalData_1731547025648.csv neural_net_amzn-docker
+# XGBoost - Seleção Otimizada de Candidatos
 
-set DATABASE_URL=sqlite:///database.db && set ACCESS_TOKEN_EXPIRE_MINUTES=30 && set SECRET_KEY=b71dc0943459ff1e7e668af25342877d641a76967061ba620fc2da7104aa1b37 && set ALGORITHM=HS256&&set DOWNLOAD_PATH=/app && set NEW_NASDAQ_FILE=HistoricalData_1731547025648.csv
+O projeto foi pensado para otimizar o processo de seleção de candidatos de uma consultoria de RH, direcionando o melhor candidato para a vaga mais compatível, utilizando um modelo preditivo baseado no XGBoost.
 
-O projeto foi pensado para maximizar o ganho de uma ação em específico (No caso foi escolhida uma ação da Amazon) baseada em um modelo de rede neural preditivo do valor da ação em um período de 30 dias no futuro.
+Para isso, os dados foram recebidos em arquivos JSON, contendo informações estruturadas sobre candidatos e vagas. Durante a preparação dos dados, foi realizada a geração de embeddings no campo de descrição do currículo (cv_pt), transformando o texto em vetores numéricos que enriqueceram a base de dados.
 
-Para isso foi criada uma API para a coleta das informações da ação, após foi feita uma tratamento na base com relação a tipagem e limpeza de "Sujeiras", uma feature engineering com a geração de novos atributos que colaboraram para o treinamento do modelo e a utilização do modelo de rede neural LSTM (Long Short Term Memory) foi treinado o modelo de predição. Todo esse processo foi encapsulado em um container (docker).
+Em seguida, foi realizada a limpeza dos dados, normalização, engenharia de atributos e a modelagem com o XGBoost, escolhido por sua alta performance, capacidade de lidar com dados heterogêneos e robustez contra overfitting. O modelo foi treinado para classificar candidatos conforme a sua compatibilidade com cada vaga.
+
+Todo esse processo foi encapsulado em uma solução modular, permitindo fácil integração com APIs e automação do fluxo de seleção.
 
 ### Link Video:
 
-- [Video Explicativo do Projeto](https://youtu.be/f7wnxA9Gg5w)
+- [Video Explicativo do Projeto]()
 
 ## Configurações de ambiente
 
@@ -33,14 +33,13 @@ wsl --install
 Utilizar os comandos abaixo para buildar o docker:
 
 ```
-poetry lock
-docker --debug build -t "neural_net_amzn-docker" .
+docker --debug build -t "fiap_datathon" .
 ```
 
 Para rodar o docker executar comando abaixo:
 
 ```
-docker run -p 8000:8000 --rm -it neural_net_amzn-docker
+docker run -p 8000:8000 --rm -it -e DATABASE_URL=sqlite:///database.db -e ACCESS_TOKEN_EXPIRE_MINUTES=30 -e SECRET_KEY=b71dc0943459ff1e7e668af25342877d641a76967061ba620fc2da7104aa1b37 -e ALGORITHM=HS256 -e DOWNLOAD_PATH=/app -e NEW_NASDAQ_FILE=HistoricalData_1731547025648.csv fiap_datathon
 ```
 
 ## Como usar os Endpoints na API:
@@ -50,17 +49,44 @@ docker run -p 8000:8000 --rm -it neural_net_amzn-docker
 3. Clicar em Authorize
 4. Colocar email e senha
 
-### 1º Endpoint: Webscrapping
+### 1º Endpoint: Autenticação /auth/token
 
-- Após a criação e autorização do usuário executar o edpoint.(Não é necessário parâmetros adicionais.)
+- Autentica o usuário por meio de e-mail e senha
 
-### 2º Endpoint: Train_model
+### 2º Endpoint: Users - Criar usuário
 
-- Realizar o request com o envio de um Json contendo os hyper-parâmetros de pré-processamento e de modelo conforme no [schemas.py](neural_net_amzn-docker/schemas.py)
+- Cria usuário para autenticação
 
-### 3º Endpoint: Predict_model
+### 3º Endpoint: Data-processing
 
-- Realizar o request com o envio de um Json-Dicionario representando o dataframe exportado pela nasdaq (Ação: amzn). Esses dados devem conter a data na qual se deseja receber a predição 30 dias no futuro e histórico até que o número de datas total seja igual ao comprimento de sequências que o modelo LSTM utiliza.
+- Executa funções de tratamentos de dados e prepara os Dataframes em uma pasta
+
+### 4º Endpoint: Train - Treino
+
+- Treina o modelo com o Dataframe fornecido
+
+### 5º Endpoint: Previsão - Predict
+
+- Realiza a previsão e mostra o resultado do modelo
+
+## Funcionalidades Aplicadas
+
+### Docker
+Para garantir a portabilidade do ambiente de desenvolvimento e produção através de:
+- Isolamento, containers contendo todas as dependências e configurações necessárias para o projeto, sem interferência por outros softwares;,
+- Execução padronizada, da mesma forma em qualquer lugar (máquina local, servidor de desenvolvimento ou de produção, etc);,
+- Gerenciamento de dependências, através do poetry para assegurar que as versões corretas das bibliotecas sejam instaladas.,
+- Implantação consistente, pois a imagem docker já encapsula todo o ambiente.
+
+### CI (Integração Contínua)
+Para automatizar a integração de código, testes e validações, detectando erros rapidamente. Isso acelera o desenvolvimento, reduz riscos e garante a entrega de software mais estável e confiável.
+
+### CD (Entrega Contínua)
+Para automatizar a entrega de software para produção, após o CI. Isso garante implantações rápidas e seguras, tornando possível a disponibilização contínua da versão mais recente do software aos usuários.
+
+### FastAPI
+
+Para permite construir APIs web de alta performance de forma rápida e eficiente. Seus principais ganhos incluem velocidade de desenvolvimento, validação automática de dados (graças ao Pydantic) e documentação interativa (Swagger/OpenAPI) integrada.
 
 ## Contribuidores
 
@@ -69,3 +95,4 @@ docker run -p 8000:8000 --rm -it neural_net_amzn-docker
 - Lucas Soares - RM 356607
 - Renan Serpa - RM 357478
 - Ruan Costa - RM 357702
+
